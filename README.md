@@ -1,4 +1,6 @@
-# random-signal
-Generation of random signal using VHDL.
+# mc-processor 
+MC simulation for trigger electronics evaluation using FPGA.
 
-poisson.vhd: Simulates poisson process using a 32 bits LFSR (but it may be scaled arbitrarly) and a Bernoulli trial. 
+poisson-generator.vhd: Simulates poisson process.
+pulse-delay.vhd: High resolution pulse delay.
+bin-onehot.vhd: Binary to one-hot encoder.
