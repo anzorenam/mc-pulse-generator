@@ -18,17 +18,17 @@ signal urnd: unsigned (urnd_width-1 downto 0);
 signal drnd: std_logic_vector (bin_width-1 downto 0);
 
 component inverse_sample is
-port(clock: in std_logic;
-address:in std_logic_vector (urnd_width-1 downto 0);
-q: out std_logic_vector (bin_width-1 downto 0));
+port(clka: in std_logic;
+addra:in std_logic_vector (urnd_width-1 downto 0);
+douta: out std_logic_vector (bin_width-1 downto 0));
 end component;
 
 begin
 
 sampler: inverse_sample
-port map(clock=>gclk,
-         address=>std_logic_vector(urnd),
-         q=>drnd
+port map(clka=>gclk,
+         addra=>std_logic_vector(urnd),
+         douta=>drnd
 );
 
 process(gclk,ctrl_rand)
