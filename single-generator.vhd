@@ -13,14 +13,14 @@ pulse_event: out std_logic);
 end single_generator;
 
 architecture x of single_generator is
-signal make_delay: std_logic;
+signal make_delay,pulse_signal: std_logic;
 signal ctrl_rand: std_logic_vector(2 downto 0);
 signal binary_aux: unsigned(bin_width-1 downto 0);
 signal onehot_aux: std_logic_vector(onehot_width-1 downto 0);
 
 component control_generator is
 port(gclk,grst: in std_logic;
-make_event: in std_logic;
+make_event,pulse_event: in std_logic;
 make_delay: out std_logic;
 ctrl_rand: out std_logic_vector(2 downto 0));
 end component;
@@ -58,6 +58,7 @@ control: control_generator
 port map(gclk=>p0,
          grst=>grst,
          make_event=>make_event,
+         pulse_event=>pulse_signal,
          make_delay=>make_delay,
          ctrl_rand=>ctrl_rand
 );
@@ -89,7 +90,9 @@ port map(p0=>p0,
          make_delay=>make_delay,
          ctrl_rand=>ctrl_rand,
          w_pattern=>onehot_aux,
-         pulse_out=>pulse_event
+         pulse_out=>pulse_signal
 );
+
+pulse_event<=pulse_signal;
 
 end x;
