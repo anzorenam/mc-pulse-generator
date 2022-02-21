@@ -4,16 +4,16 @@ use ieee.numeric_std.all;
 
 entity control_generator is
 port(gclk,grst: in std_logic;
-make_event: in std_logic;
+make_event,pulse_event: in std_logic;
 make_delay: out std_logic;
 ctrl_rand: out std_logic_vector(2 downto 0));
 end control_generator;
 
 architecture x of control_generator is
-type state is (clear_init,wait_event,gen_random0,gen_random1,gen_random2,gen_random3,wait_timer,done);
+type state is (clear_init,wait_event,gen_random0,gen_random1,gen_random2,gen_random3,wait_delay,stop_pulse,done);
 signal presente,futuro: state;
-constant T0: natural := 128;
-constant tmax: natural := T0-1;
+constant T0: natural := 10;
+constant tmax: natural := T0;
 signal timer: natural range 0 to tmax;
 
 begin
@@ -44,7 +44,7 @@ begin
   end if;
 end process;
 
-process(presente,make_event,timer)
+process(presente,make_event,timer,pulse_event)
 begin
   make_delay<='0';
   ctrl_rand<="000";
@@ -68,13 +68,20 @@ begin
       futuro<=gen_random3;
     when gen_random3=>
       ctrl_rand<="100";
-      futuro<=wait_timer;
-    when wait_timer=>
+      futuro<=wait_delay;
+    when wait_delay=>
+      make_delay<='1';
+      if pulse_event='0' then
+        futuro<=wait_delay;
+      elsif pulse_event='1' then
+        futuro<=stop_pulse;
+      end if;
+    when stop_pulse=>
       make_delay<='1';
       if timer>=T0-1 then
         futuro<=done;
       else
-        futuro<=wait_timer;
+        futuro<=stop_pulse;
       end if;
     when done=>
       ctrl_rand<="101";
