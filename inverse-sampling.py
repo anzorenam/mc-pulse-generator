@@ -8,30 +8,30 @@ import matplotlib.path as path
 import scipy.stats as stats
 import numpy.random as rand
 
-Nbits=14
+Nbits=12
 Mbits=10
 W=2**Nbits-1
 M=2**Mbits
 mu=255.0
 sigma=60.0
-N=10000
-seed=10
+N=1000000
+seed=20
 test=False
 write=True
 rng=rand.default_rng(seed)
-u=rng.random(size=N)
+u=rng.uniform(low=0,high=1.0,size=N)
 udiscrete=rng.integers(low=0,high=W,size=N,endpoint=True)
 t=np.arange(0,512.0,0.5)
 tsample=np.zeros(N)
 tsam_discrete=np.zeros(N)
 pden=stats.norm.pdf(x=t,loc=mu,scale=sigma)
-pcum=stats.norm.cdf(x=t,loc=mu,scale=sigma)
+pcum=np.cumsum(pden)/np.sum(pden)
 pcum_discrete=np.uint16(np.rint(W*pcum))
-print(np.shape(pcum_discrete))
 for k in range(0,N):
   tsample[k]=t[pcum>=u[k]][0]
   tsam_discrete[k]=t[pcum_discrete>=udiscrete[k]][0]
 
+chi=3.0
 tbins=np.arange(0,512.0,0.5)
 if test==True:
   pnorm=stats.norm.rvs(size=N,loc=mu,scale=sigma,random_state=rng)
@@ -43,9 +43,13 @@ if test==True:
   print(np.sum((fobs-fexp)**2.0/fexp))
   fig,ax=plt.subplots(nrows=1,ncols=2,sharex=False,sharey=False)
   ax[0].plot(t,pden,ds='steps-pre')
-  ax[0].hist(tsample,bins=tbins,density=True)
+  ax[0].hist(tsample,bins=tbins,log=True,density=True)
+  ax[0].set_xlim(mu-chi*sigma,mu+chi*sigma)
+  ax[0].set_ylim(1e-7,1e0)
   ax[1].plot(t,pden,ds='steps-pre')
-  ax[1].hist(tsam_discrete,bins=tbins,density=True)
+  ax[1].hist(tsam_discrete,bins=tbins,log=True,density=True)
+  ax[1].set_xlim(mu-chi*sigma,mu+chi*sigma)
+  ax[1].set_ylim(1e-7,1e0)
   plt.show()
 
 if write==True:
