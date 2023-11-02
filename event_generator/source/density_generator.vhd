@@ -2,67 +2,37 @@ library ieee;
 library xpm;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use xpm.vcomponents.all;
 
 entity density_generator is
-generic(init_seed: natural:= 1;
-bin_width: natural:= 10;
-urnd_width: natural:= 12;
-rom_init: string:= "inverse_sample.mem");
-port(gclk: in std_logic;
-ctrl_rand: in std_logic_vector (2 downto 0);
-binary_random: out unsigned (bin_width-1 downto 0));
+port(gclk,gen_sel: in std_logic;
+seed: in unsigned (7 downto 0);
+ctrl_rand: in std_logic_vector (3 downto 0);
+drnd: in unsigned (15 downto 0);
+urnd: out unsigned (15 downto 0);
+binary_rand: out unsigned (9 downto 0));
 end entity;
 
 architecture x of density_generator is
-constant seed: natural:= init_seed;
-signal lfsr: unsigned (63+urnd_width downto 0);
-signal urnd: unsigned (urnd_width-1 downto 0);
-signal drnd: std_logic_vector (bin_width-1 downto 0);
+signal local_rst: std_logic;
+signal local_hab: std_logic_vector (1 downto 0);
+signal drnd_aux: unsigned (15 downto 0);
+
+signal lfsr,init_seed: unsigned (79 downto 0);
 
 begin
-
-sampler: xpm_memory_sprom
-generic map(ADDR_WIDTH_A=>urnd_width,
-AUTO_SLEEP_TIME=>0,
-CASCADE_HEIGHT=>0,
-ECC_MODE=>"no_ecc",
-MEMORY_INIT_FILE=>rom_init,
-MEMORY_INIT_PARAM=>"",
-MEMORY_OPTIMIZATION=>"true",
-MEMORY_PRIMITIVE=>"distributed",
-MEMORY_SIZE=>bin_width*(2**urnd_width),
-MESSAGE_CONTROL=>0,
-READ_DATA_WIDTH_A=>bin_width,
-READ_LATENCY_A=>1,
-READ_RESET_VALUE_A=>"0",
-RST_MODE_A=>"SYNC",
-SIM_ASSERT_CHK=>0,
-USE_MEM_INIT=>0,
-WAKEUP_TIME=>"disable_sleep")
-port map(dbiterra=>open,
-         douta=>drnd,
-         sbiterra=>open,
-         addra=>std_logic_vector(urnd),
-         clka=>gclk,
-         injectdbiterra=>'0',
-         injectsbiterra=>'0',
-         regcea=>'0',
-         ena=>'1',
-         rsta=>'0',
-         sleep=>'0'
-);
 
 process(gclk)
 begin
   if rising_edge(gclk) then
-    if ctrl_rand="001" then
-      lfsr<=to_unsigned(seed,63+urnd_width+1);
+    if ctrl_rand="0001" then
+      lfsr<=init_seed;
     else
-      lfsr(63+urnd_width downto urnd_width)<=lfsr(63 downto 0);
-      for j in 0 to urnd_width-1 loop
-        lfsr(urnd_width-j-1)<=lfsr(75-j) xor lfsr(74-j) xor lfsr(65-j) xor lfsr(64-j);
-      end loop;
+      if local_hab="01" then
+        lfsr(79 downto 16)<=lfsr(63 downto 0);
+        for j in 0 to 15 loop
+          lfsr(15-j)<=lfsr(79-j) xor lfsr(78-j) xor lfsr(42-j) xor lfsr(41-j);
+        end loop;
+      end if;
     end if;
   end if;
 end process;
@@ -70,10 +40,12 @@ end process;
 process(gclk)
 begin
   if rising_edge(gclk) then
-    if ctrl_rand="010" then
-      urnd<=lfsr(urnd_width-1 downto 0);
-    elsif ctrl_rand="001" or ctrl_rand="110" then
+    if local_rst='1' then
       urnd<=(others=>'0');
+    else
+      if local_hab="10" then
+        urnd<=lfsr(15 downto 0);
+      end if;
     end if;
   end if;
 end process;
@@ -81,12 +53,28 @@ end process;
 process(gclk)
 begin
   if rising_edge(gclk) then
-    if ctrl_rand="011" then
-      binary_random<=unsigned(drnd);
-    elsif ctrl_rand="001" or ctrl_rand="110" then
-      binary_random<=(others=>'0');
+    if local_rst='1' then
+      binary_rand<=(others=>'0');
+    else
+      if local_hab="11" then
+        binary_rand<=drnd_aux(9 downto 0);
+      end if;
     end if;
   end if;
 end process;
+
+init_seed(79 downto 8)<=(others=>'0');
+init_seed(7 downto 0)<=seed;
+
+local_rst<='1' when (ctrl_rand="0001" or ctrl_rand="1000") else
+                 '0';
+
+local_hab<="01" when (ctrl_rand="0010" and gen_sel='1') else
+                  "10" when (ctrl_rand="0011" and gen_sel='1') else
+                  "11" when (ctrl_rand="0101" and gen_sel='1') else
+                  "00";
+
+drnd_aux<=drnd;
+
 
 end x;
